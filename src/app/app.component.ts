@@ -1,14 +1,16 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { CurrentUserService } from './core/services/current-user.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule, MatIconModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, MatDividerModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <mat-toolbar color="primary">
@@ -19,12 +21,21 @@ import { CurrentUserService } from './core/services/current-user.service';
         <mat-icon>dynamic_feed</mat-icon> Feed
       </a>
       @if (currentUser.user(); as user) {
-        <a mat-button [routerLink]="['/users', user.id]" routerLinkActive="active-link">
+        <button mat-button [matMenuTriggerFor]="userMenu">
           <mat-icon>person</mat-icon> {{ user.username }}
-        </a>
-        <button mat-icon-button (click)="currentUser.clearUser()" title="Sign out">
-          <mat-icon>logout</mat-icon>
         </button>
+        <mat-menu #userMenu="matMenu">
+          <a mat-menu-item [routerLink]="['/users', user.id]">
+            <mat-icon>account_circle</mat-icon> My Profile
+          </a>
+          <a mat-menu-item routerLink="/settings">
+            <mat-icon>settings</mat-icon> Settings
+          </a>
+          <mat-divider />
+          <button mat-menu-item (click)="signOut()">
+            <mat-icon>logout</mat-icon> Sign out
+          </button>
+        </mat-menu>
       } @else {
         <a mat-button routerLink="/login" routerLinkActive="active-link">
           <mat-icon>login</mat-icon> Sign in
@@ -45,4 +56,10 @@ import { CurrentUserService } from './core/services/current-user.service';
 })
 export class AppComponent {
   protected readonly currentUser = inject(CurrentUserService);
+  private readonly router = inject(Router);
+
+  protected signOut(): void {
+    this.currentUser.clearUser();
+    this.router.navigate(['/login']);
+  }
 }

@@ -60,9 +60,9 @@ export interface PostShareEvent {
       }
 
       <mat-card-header>
-        <img mat-card-avatar
-             [src]="post().authorAvatarUrl || 'assets/default-avatar.png'"
-             [alt]="post().authorUsername" />
+        @if (post().authorAvatarUrl) {
+          <img mat-card-avatar [src]="post().authorAvatarUrl" [alt]="post().authorUsername" />
+        }
         <mat-card-title>{{ post().authorUsername }}</mat-card-title>
         <mat-card-subtitle>
           {{ post().createdAt | date:'medium' }}

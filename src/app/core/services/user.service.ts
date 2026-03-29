@@ -28,4 +28,10 @@ export class UserService {
   updateUser(id: string, request: Partial<User>): Observable<User> {
     return this.http.put<User>(`${this.base}/${id}`, request);
   }
+
+  uploadAvatar(userId: string, file: File): Observable<{ avatarUrl: string }> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post<{ avatarUrl: string }>(`${this.base}/${userId}/avatar`, form);
+  }
 }

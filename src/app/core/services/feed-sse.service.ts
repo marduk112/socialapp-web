@@ -40,6 +40,7 @@ export class FeedSseService implements OnDestroy {
           id: data.postId,
           authorId: data.authorId,
           authorUsername: data.authorUsername,
+          authorAvatarUrl: data.authorAvatarUrl,
           content: data.content,
           imageUrl: data.imageUrl,
           likesCount: 0,

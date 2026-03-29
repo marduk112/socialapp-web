@@ -4,6 +4,7 @@ export interface Post {
   id: string;
   authorId: string;
   authorUsername: string;
+  authorAvatarUrl?: string;
   content: string;
   imageUrl?: string;
   likesCount: number;
@@ -62,6 +63,7 @@ export interface PostCreatedSseEvent {
   postId: string;
   authorId: string;
   authorUsername: string;
+  authorAvatarUrl?: string;
   content: string;
   imageUrl?: string;
 }

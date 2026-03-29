@@ -112,11 +112,7 @@ export class UserProfileComponent implements OnInit {
       next: () => {
         this._isFollowing.set(shouldFollow);
         this.followLoading.set(false);
-        this.snackBar.open(
-          shouldFollow ? 'Following!' : 'Unfollowed',
-          undefined,
-          { duration: 2000 }
-        );
+        this.snackBar.open(shouldFollow ? 'Following!' : 'Unfollowed', undefined, { duration: 2000 });
       },
       error: () => {
         this.followLoading.set(false);

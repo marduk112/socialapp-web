@@ -23,9 +23,9 @@ export interface UserCardData {
   template: `
     <mat-card class="user-card">
       <mat-card-header>
-        <img mat-card-avatar
-             [src]="user().avatarUrl || 'assets/default-avatar.png'"
-             [alt]="user().username + ' avatar'" />
+        @if (user().avatarUrl) {
+          <img mat-card-avatar [src]="user().avatarUrl" [alt]="user().username + ' avatar'" />
+        }
         <mat-card-title>{{ user().username }}</mat-card-title>
         @if (user().bio) {
           <mat-card-subtitle>{{ user().bio }}</mat-card-subtitle>
