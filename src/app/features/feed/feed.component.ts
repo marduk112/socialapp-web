@@ -24,7 +24,7 @@ import { Post, Comment, ReactionType } from '../../core/models/post.model';
 
 import { PostCardComponent, PostEditEvent, PostShareEvent } from '../../shared/components/post-card/post-card.component';
 import { ReactionEvent } from '../../shared/components/reaction-bar/reaction-bar.component';
-import { CommentSectionComponent, AddCommentEvent, EditCommentEvent, DeleteCommentEvent } from '../../shared/components/comment-section/comment-section.component';
+import { CommentSectionComponent, AddCommentEvent, EditCommentEvent, DeleteCommentEvent, CommentReactionEvent } from '../../shared/components/comment-section/comment-section.component';
 
 @Component({
   selector: 'app-feed',
@@ -109,7 +109,8 @@ import { CommentSectionComponent, AddCommentEvent, EditCommentEvent, DeleteComme
             [currentUserId]="currentUser.user()?.id ?? null"
             (addComment)="onAddComment(post.id, $event)"
             (editComment)="onEditComment($event)"
-            (deleteComment)="onDeleteComment($event)" />
+            (deleteComment)="onDeleteComment($event)"
+            (reactToComment)="onCommentReact(post.id, $event)" />
         }
       }
 
@@ -358,6 +359,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       authorId: user.id,
       authorUsername: user.username,
       content: event.content,
+      parentCommentId: event.parentCommentId,
     }).subscribe({
       next: comment => {
         this._comments.update(map => {
@@ -366,12 +368,68 @@ export class FeedComponent implements OnInit, OnDestroy {
           next.set(postId, [...existing, comment]);
           return next;
         });
-        this._posts.update(posts =>
-          posts.map(p => p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p)
-        );
+        if (!event.parentCommentId) {
+          this._posts.update(posts =>
+            posts.map(p => p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p)
+          );
+        }
       },
       error: () => this.snackBar.open('Failed to add comment', 'Dismiss', { duration: 3000 }),
     });
+  }
+
+  protected onCommentReact(postId: string, event: CommentReactionEvent): void {
+    const userId = this.currentUser.user()?.id;
+    if (!userId) return;
+
+    this._comments.update(map => {
+      const next = new Map(map);
+      const comments = next.get(postId);
+      if (!comments) return next;
+      next.set(postId, comments.map(c =>
+        c.id === event.commentId ? this.applyOptimisticCommentReaction(c, event) : c
+      ));
+      return next;
+    });
+
+    this.postService.reactToComment(event.commentId, userId, event.type as ReactionType, event.add).subscribe({
+      next: updated => {
+        this._comments.update(map => {
+          const next = new Map(map);
+          const comments = next.get(postId);
+          if (!comments) return next;
+          next.set(postId, comments.map(c =>
+            c.id === updated.id
+              ? { ...updated, userReaction: event.add ? event.type as ReactionType : null }
+              : c
+          ));
+          return next;
+        });
+      },
+      error: () => {
+        this.loadComments(postId);
+        this.snackBar.open('Reaction failed', 'Dismiss', { duration: 2000 });
+      },
+    });
+  }
+
+  private applyOptimisticCommentReaction(comment: Comment, event: CommentReactionEvent): Comment {
+    let { likesCount, dislikesCount, userReaction } = comment;
+    const opposite: ReactionType = event.type === 'LIKE' ? 'DISLIKE' : 'LIKE';
+    if (event.add) {
+      if (userReaction === opposite) {
+        if (opposite === 'LIKE') likesCount = Math.max(0, likesCount - 1);
+        else dislikesCount = Math.max(0, dislikesCount - 1);
+      }
+      if (event.type === 'LIKE') likesCount++;
+      else dislikesCount++;
+      userReaction = event.type as ReactionType;
+    } else {
+      if (event.type === 'LIKE') likesCount = Math.max(0, likesCount - 1);
+      else dislikesCount = Math.max(0, dislikesCount - 1);
+      userReaction = null;
+    }
+    return { ...comment, likesCount, dislikesCount, userReaction };
   }
 
   protected onEditComment(event: EditCommentEvent): void {

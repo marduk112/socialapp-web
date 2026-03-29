@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonModule } from '@angular/material/button';
@@ -61,9 +62,11 @@ export interface PostShareEvent {
 
       <mat-card-header>
         @if (post().authorAvatarUrl) {
-          <img mat-card-avatar [src]="post().authorAvatarUrl" [alt]="post().authorUsername" />
+          <img mat-card-avatar [src]="post().authorAvatarUrl" [alt]="post().authorUsername"
+               (error)="onAvatarError($event)"
+               class="author-link" (click)="goToAuthor()" />
         }
-        <mat-card-title>{{ post().authorUsername }}</mat-card-title>
+        <mat-card-title class="author-link" (click)="goToAuthor()">{{ post().authorUsername }}</mat-card-title>
         <mat-card-subtitle>
           {{ post().createdAt | date:'medium' }}
           @if (post().updatedAt && post().updatedAt !== post().createdAt) {
@@ -153,6 +156,8 @@ export interface PostShareEvent {
   `,
   styles: [`
     .post-card { margin-bottom: 16px; }
+    .author-link { cursor: pointer; }
+    .author-link:hover { text-decoration: underline; }
     .post-content { white-space: pre-wrap; font-size: 15px; line-height: 1.5; }
     .post-image { width: 100%; border-radius: 4px; margin-top: 8px; max-height: 400px; object-fit: cover; }
     .shared-badge {
@@ -181,6 +186,8 @@ export interface PostShareEvent {
   `]
 })
 export class PostCardComponent {
+  private readonly router = inject(Router);
+
   post = input.required<PostCardData>();
   currentUserId = input<string | null>(null);
   react = output<ReactionEvent>();
@@ -193,6 +200,14 @@ export class PostCardComponent {
   editContent = '';
   showShareForm = signal(false);
   shareComment = '';
+
+  goToAuthor(): void {
+    this.router.navigate(['/users', this.post().authorId]);
+  }
+
+  onAvatarError(event: Event): void {
+    (event.target as HTMLImageElement).style.display = 'none';
+  }
 
   isOwner() {
     const userId = this.currentUserId();

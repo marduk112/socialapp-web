@@ -3,7 +3,7 @@ node_modules/
 
 # Angular build output
 dist/
-.angular/cache/
+.angular/
 
 # Environment files with secrets
 src/environments/environment.prod.ts

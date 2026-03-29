@@ -49,19 +49,6 @@ import { CurrentUserService } from '../../core/services/current-user.service';
               }
 
               <div class="avatar-controls">
-                <mat-form-field appearance="outline" class="avatar-url-field">
-                  <mat-label>Avatar URL</mat-label>
-                  <input matInput [(ngModel)]="editAvatarUrl"
-                         (ngModelChange)="onAvatarUrlChange($event)"
-                         placeholder="https://..." />
-                  @if (editAvatarUrl) {
-                    <button matSuffix mat-icon-button aria-label="Clear"
-                            (click)="editAvatarUrl = ''; avatarPreviewUrl.set('')">
-                      <mat-icon>close</mat-icon>
-                    </button>
-                  }
-                </mat-form-field>
-
                 <div class="upload-row">
                   <button mat-stroked-button [disabled]="uploading()"
                           (click)="fileInput.click()">
@@ -120,7 +107,6 @@ import { CurrentUserService } from '../../core/services/current-user.service';
     }
     .avatar-placeholder span { font-size: 11px; color: #aaa; }
     .avatar-controls { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-    .avatar-url-field { width: 100%; }
     .upload-row { display: flex; align-items: center; gap: 12px; }
     .upload-hint { font-size: 12px; color: #999; }
     .full-width { width: 100%; }
@@ -149,10 +135,6 @@ export class SettingsComponent implements OnInit {
     this.editAvatarUrl = user.avatarUrl ?? '';
     this.editBio = user.bio ?? '';
     this.avatarPreviewUrl.set(this.editAvatarUrl);
-  }
-
-  protected onAvatarUrlChange(url: string): void {
-    this.avatarPreviewUrl.set(url.trim());
   }
 
   protected onPreviewError(event: Event): void {

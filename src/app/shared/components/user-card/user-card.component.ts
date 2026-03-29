@@ -39,12 +39,14 @@ export interface UserCardData {
         </div>
       </mat-card-content>
 
-      <mat-card-actions align="end">
-        <ui-follow-button
-          [isFollowing]="user().isFollowing ?? false"
-          [loading]="followLoading()"
-          (followToggle)="followToggle.emit($event)" />
-      </mat-card-actions>
+      @if (!isOwnProfile()) {
+        <mat-card-actions align="end">
+          <ui-follow-button
+            [isFollowing]="user().isFollowing ?? false"
+            [loading]="followLoading()"
+            (followToggle)="followToggle.emit($event)" />
+        </mat-card-actions>
+      }
     </mat-card>
   `,
   styles: [`
@@ -55,5 +57,6 @@ export interface UserCardData {
 export class UserCardComponent {
   user = input.required<UserCardData>();
   followLoading = input<boolean>(false);
+  isOwnProfile = input<boolean>(false);
   followToggle = output<boolean>();
 }

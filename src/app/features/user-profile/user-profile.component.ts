@@ -30,6 +30,7 @@ import { UserCardComponent, UserCardData } from '../../shared/components/user-ca
         <ui-user-card
           [user]="cardData()!"
           [followLoading]="followLoading()"
+          [isOwnProfile]="isOwnProfile()"
           (followToggle)="onFollowToggle($event)" />
       } @else {
         <p>User not found.</p>
@@ -52,6 +53,10 @@ export class UserProfileComponent implements OnInit {
   private readonly _isFollowing = signal(false);
   protected readonly loading = signal(false);
   protected readonly followLoading = signal(false);
+
+  protected readonly isOwnProfile = computed(() =>
+    this.currentUser.user()?.id === this.profileId()
+  );
 
   protected readonly cardData = computed<UserCardData | null>(() => {
     const user = this._user();

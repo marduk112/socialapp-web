@@ -42,7 +42,12 @@ export interface Comment {
   postId: string;
   authorId: string;
   authorUsername: string;
+  authorAvatarUrl?: string;
   content: string;
+  likesCount: number;
+  dislikesCount: number;
+  userReaction?: ReactionType | null;
+  parentCommentId?: string | null;
   createdAt: string;
   updatedAt?: string;
 }
@@ -51,6 +56,7 @@ export interface CreateCommentRequest {
   authorId: string;
   authorUsername: string;
   content: string;
+  parentCommentId?: string | null;
 }
 
 export interface UpdateCommentRequest {

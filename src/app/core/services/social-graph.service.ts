@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { ApiClient } from './api-client.service';
 
 export interface UserNode {
   userId: string;
@@ -11,30 +10,25 @@ export interface UserNode {
 
 @Injectable({ providedIn: 'root' })
 export class SocialGraphService {
-  private readonly http = inject(HttpClient);
-  private readonly base = `${environment.apiUrl}/social`;
+  private readonly api = inject(ApiClient);
 
   follow(followerId: string, followeeId: string): Observable<void> {
-    return this.http.post<void>(`${this.base}/follow`, { followerId, followeeId });
+    return this.api.post<void>('/social/follow', { followerId, followeeId });
   }
 
   unfollow(followerId: string, followeeId: string): Observable<void> {
-    return this.http.delete<void>(`${this.base}/follow`, {
-      body: { followerId, followeeId }
-    });
+    return this.api.delete<void>('/social/follow', { body: { followerId, followeeId } });
   }
 
   getFollowing(userId: string): Observable<UserNode[]> {
-    return this.http.get<UserNode[]>(`${this.base}/${userId}/following`);
+    return this.api.get<UserNode[]>(`/social/${userId}/following`);
   }
 
   getFollowers(userId: string): Observable<UserNode[]> {
-    return this.http.get<UserNode[]>(`${this.base}/${userId}/followers`);
+    return this.api.get<UserNode[]>(`/social/${userId}/followers`);
   }
 
   isFollowing(followerId: string, followeeId: string): Observable<boolean> {
-    return this.http.get<boolean>(`${this.base}/is-following`, {
-      params: { followerId, followeeId }
-    });
+    return this.api.get<boolean>('/social/is-following', { followerId, followeeId });
   }
 }
