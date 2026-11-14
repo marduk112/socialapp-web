@@ -1,0 +1,152 @@
+import { APIRequestContext, request as pwRequest } from '@playwright/test';
+
+/** Backend is addressed directly (not via the dev-server proxy). */
+export const API = 'http://localhost:8080/api/v1';
+
+export interface TestUser {
+  id: string;
+  username: string;
+  email: string;
+  password: string;
+  token: string;
+}
+
+export function uniqueSuffix(): string {
+  return `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+}
+
+export function uniqueCredentials(): { username: string; email: string; password: string } {
+  const username = `u${uniqueSuffix()}`;
+  return { username, email: `${username}@example.com`.toLowerCase(), password: 'password123' };
+}
+
+async function withApi<T>(fn: (ctx: APIRequestContext) => Promise<T>): Promise<T> {
+  const ctx = await pwRequest.newContext();
+  try {
+    return await fn(ctx);
+  } finally {
+    await ctx.dispose();
+  }
+}
+
+function auth(token: string) {
+  return { Authorization: `Bearer ${token}` };
+}
+
+async function ok<T>(res: { ok(): boolean; status(): number; text(): Promise<string>; json(): Promise<T> }, what: string): Promise<T> {
+  if (!res.ok()) throw new Error(`${what} failed: ${res.status()} ${await res.text()}`);
+  return res.json();
+}
+
+/** Registers a user with unique credentials via the API. */
+export async function registerUser(): Promise<TestUser> {
+  const creds = uniqueCredentials();
+  return withApi(async ctx => {
+    const body = await ok<{ id: string; token: string }>(
+      await ctx.post(`${API}/users`, { data: creds }), 'registerUser');
+    return { ...creds, id: body.id, token: body.token };
+  });
+}
+
+export interface ApiPost {
+  id: string; content: string; authorId: string; likesCount: number;
+  type?: 'POST' | 'REPOST' | 'QUOTE';
+  repostsCount?: number;
+  quotesCount?: number;
+  viewerReposted?: boolean;
+  original?: ApiPost | null;
+}
+export interface ApiComment { id: string; content: string; }
+
+export async function createPost(token: string, content: string): Promise<ApiPost> {
+  return withApi(async ctx =>
+    ok<ApiPost>(await ctx.post(`${API}/posts`, { data: { content }, headers: auth(token) }), 'createPost'));
+}
+
+export async function deletePost(token: string, postId: string): Promise<void> {
+  await withApi(async ctx => {
+    const res = await ctx.delete(`${API}/posts/${postId}`, { headers: auth(token) });
+    if (!res.ok()) throw new Error(`deletePost failed: ${res.status()}`);
+  });
+}
+
+/** Reposts `postId` (an already-reposted post answers 200 with the existing item). */
+export async function repost(token: string, postId: string): Promise<ApiPost> {
+  return withApi(async ctx =>
+    ok<ApiPost>(await ctx.post(`${API}/posts/${postId}/repost`, { headers: auth(token) }), 'repost'));
+}
+
+/** `postId` = the ORIGINAL post id. */
+export async function undoRepost(token: string, postId: string): Promise<void> {
+  await withApi(async ctx => {
+    const res = await ctx.delete(`${API}/posts/${postId}/repost`, { headers: auth(token) });
+    if (!res.ok()) throw new Error(`undoRepost failed: ${res.status()}`);
+  });
+}
+
+export async function quote(token: string, postId: string, comment: string): Promise<ApiPost> {
+  return withApi(async ctx =>
+    ok<ApiPost>(await ctx.post(`${API}/posts/${postId}/quote`,
+      { data: { comment }, headers: auth(token) }), 'quote'));
+}
+
+export async function createComment(token: string, postId: string, content: string, parentCommentId?: string): Promise<ApiComment> {
+  return withApi(async ctx =>
+    ok<ApiComment>(await ctx.post(`${API}/posts/${postId}/comments`,
+      { data: { content, parentCommentId }, headers: auth(token) }), 'createComment'));
+}
+
+export async function follow(token: string, followeeId: string): Promise<void> {
+  await withApi(async ctx => {
+    // Right after registration the user nodes reach Neo4j asynchronously (Kafka), so a follow can
+    // legitimately answer 404 for a moment. Retry on 404 only; any other failure is real.
+    const deadline = Date.now() + 15_000;
+    for (;;) {
+      const res = await ctx.post(`${API}/social/follow`, { data: { followeeId }, headers: auth(token) });
+      if (res.ok()) return;
+      if (res.status() !== 404 || Date.now() > deadline) {
+        throw new Error(`follow failed: ${res.status()}`);
+      }
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+  });
+}
+
+export async function getFollowers(token: string, userId: string): Promise<{ userId: string }[]> {
+  return withApi(async ctx =>
+    ok(await ctx.get(`${API}/social/${userId}/followers`, { headers: auth(token) }), 'getFollowers'));
+}
+
+export async function unfollow(token: string, followeeId: string): Promise<void> {
+  await withApi(async ctx => {
+    const res = await ctx.delete(`${API}/social/follow`, { data: { followeeId }, headers: auth(token) });
+    if (!res.ok()) throw new Error(`unfollow failed: ${res.status()}`);
+  });
+}
+
+export interface ApiFeedPage { items: ApiPost[]; nextCursor: string | null; }
+export type FeedScope = 'all' | 'following';
+
+export async function getFeedPage(token: string, scope: FeedScope = 'all', cursor?: string | null, size = 20): Promise<ApiFeedPage> {
+  const params: Record<string, string | number> = { scope, size };
+  if (cursor) params['cursor'] = cursor;
+  return withApi(async ctx =>
+    ok(await ctx.get(`${API}/feed`, { params, headers: auth(token) }), 'getFeed'));
+}
+
+/** First page items only (default scope = all). */
+export async function getFeed(token: string, size = 20, scope: FeedScope = 'all'): Promise<ApiPost[]> {
+  return (await getFeedPage(token, scope, undefined, size)).items;
+}
+
+export async function getUser(token: string, id: string): Promise<{ bio?: string | null }> {
+  return withApi(async ctx =>
+    ok(await ctx.get(`${API}/users/${id}`, { headers: auth(token) }), 'getUser'));
+}
+
+export async function getHashtagPage(token: string, tag: string, cursor?: string | null, size = 20): Promise<ApiFeedPage> {
+  const params: Record<string, string | number> = { size };
+  if (cursor) params['cursor'] = cursor;
+  return withApi(async ctx =>
+    ok(await ctx.get(`${API}/hashtags/${encodeURIComponent(tag)}/posts`, { params, headers: auth(token) }), 'getHashtagPage'));
+}

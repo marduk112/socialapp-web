@@ -4,6 +4,8 @@ export interface User {
   email: string;
   bio?: string;
   avatarUrl?: string;
+  /** JWT issued on login/register; sent as Bearer on API calls. */
+  token?: string;
 }
 
 export interface CreateUserRequest {

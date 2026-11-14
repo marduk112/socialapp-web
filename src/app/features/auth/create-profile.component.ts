@@ -5,6 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -47,10 +48,10 @@ import { CurrentUserService } from '../../core/services/current-user.service';
                      [(ngModel)]="username"
                      required
                      minlength="3"
-                     maxlength="50"
+                     maxlength="30"
                      placeholder="e.g. alice"
                      [disabled]="loading()" />
-              <mat-error>Username must be 3–50 characters</mat-error>
+              <mat-error>Username must be 3–30 characters</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
@@ -73,9 +74,10 @@ import { CurrentUserService } from '../../core/services/current-user.service';
                      name="password"
                      [(ngModel)]="password"
                      required
-                     minlength="6"
+                     minlength="8"
+                     maxlength="72"
                      [disabled]="loading()" />
-              <mat-error>Password must be at least 6 characters</mat-error>
+              <mat-error>Password must be 8–72 characters</mat-error>
             </mat-form-field>
           </form>
         </mat-card-content>
@@ -128,9 +130,16 @@ export class CreateProfileComponent {
         this.currentUser.setUser(user);
         this.ngZone.run(() => this.router.navigate(['/feed']));
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.loading.set(false);
-        this.snackBar.open('Failed to create profile — username or email may already be taken.', 'Dismiss', { duration: 4000 });
+        // 400 = validation failed (server explains which field), 409 = username/email taken
+        const message =
+          err.status === 400 && err.error?.error
+            ? String(err.error.error)
+            : err.status === 409
+              ? 'Username or email is already taken.'
+              : 'Failed to create profile — please try again.';
+        this.snackBar.open(message, 'Dismiss', { duration: 5000 });
       },
     });
   }

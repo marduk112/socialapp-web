@@ -12,12 +12,12 @@ export interface UserNode {
 export class SocialGraphService {
   private readonly api = inject(ApiClient);
 
-  follow(followerId: string, followeeId: string): Observable<void> {
-    return this.api.post<void>('/social/follow', { followerId, followeeId });
+  follow(followeeId: string): Observable<void> {
+    return this.api.post<void>('/social/follow', { followeeId });
   }
 
-  unfollow(followerId: string, followeeId: string): Observable<void> {
-    return this.api.delete<void>('/social/follow', { body: { followerId, followeeId } });
+  unfollow(followeeId: string): Observable<void> {
+    return this.api.delete<void>('/social/follow', { body: { followeeId } });
   }
 
   getFollowing(userId: string): Observable<UserNode[]> {
@@ -28,7 +28,7 @@ export class SocialGraphService {
     return this.api.get<UserNode[]>(`/social/${userId}/followers`);
   }
 
-  isFollowing(followerId: string, followeeId: string): Observable<boolean> {
-    return this.api.get<boolean>('/social/is-following', { followerId, followeeId });
+  isFollowing(followeeId: string): Observable<boolean> {
+    return this.api.get<boolean>('/social/is-following', { followeeId });
   }
 }

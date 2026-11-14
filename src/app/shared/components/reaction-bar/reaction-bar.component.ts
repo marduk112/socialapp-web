@@ -17,21 +17,21 @@ export interface ReactionEvent {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="reaction-bar">
-      <button mat-icon-button
+      <button mat-icon-button data-testid="like-btn"
               [class.active-like]="userReaction() === 'LIKE'"
               matTooltip="Like"
               (click)="onReact('LIKE')">
         <mat-icon>thumb_up</mat-icon>
       </button>
-      <span class="count">{{ likesCount() }}</span>
+      <span class="count" data-testid="like-count">{{ likesCount() }}</span>
 
-      <button mat-icon-button
+      <button mat-icon-button data-testid="dislike-btn"
               [class.active-dislike]="userReaction() === 'DISLIKE'"
               matTooltip="Dislike"
               (click)="onReact('DISLIKE')">
         <mat-icon>thumb_down</mat-icon>
       </button>
-      <span class="count">{{ dislikesCount() }}</span>
+      <span class="count" data-testid="dislike-count">{{ dislikesCount() }}</span>
     </div>
   `,
   styles: [`

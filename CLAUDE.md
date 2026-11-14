@@ -54,9 +54,21 @@ allPosts = computed(() => {
 
 **Never break this merge logic** — it prevents duplicate posts when SSE delivers a post that also appears in the paginated response.
 
+### Timeline scopes and pagination
+
+- Two tabs: **"For you"** (`scope=all`, default) and **"Following"** (`scope=following` = followed users + own posts).
+- `PostService.getFeed(scope, cursor?, size=20)` → `FeedPage { items, nextCursor }` (keyset pagination; `nextCursor === null`
+  = last page). "Load more" appends the next page, filtering ids already shown.
+- `setScope()` resets list/cursor, calls `FeedSseService.reconnect(scope)` and reloads. `loadGeneration` makes responses that
+  arrive after a scope switch get ignored — `loadFeed()` must therefore also reset `loadingMore`.
+- Follows reach the Feed projection asynchronously (Kafka + outbox, ~0.3–1 s), so a just-made follow is not instantly
+  reflected in the Following timeline.
+
 ## SSE (Server-Sent Events)
 
-`FeedSseService` connects to `GET /api/v1/feed/stream`.
+`FeedSseService` connects to `GET /api/v1/feed/stream?access_token=<jwt>&scope=all|following`
+(`connect(scope)`, `reconnect(scope)` = disconnect + clear live posts + connect). The token is a query param because
+`EventSource` cannot send headers; the server filters by scope.
 
 SSE event names (must match backend exactly):
 - `"connected"` — heartbeat on subscribe
@@ -108,16 +120,62 @@ ngOnInit() {
 }
 ```
 
+## Post limit and rich text
+
+- Post / edit / share-comment content is limited to 500 Unicode code points (`shared/utils/post-limit.ts`, counted via
+  `[...text].length`, not `.length`). `ui-char-counter` shows `n/500` (warn >450, error >500, host `data-state`);
+  buttons are disabled when empty/over limit; pasted text is never truncated.
+- `ui-rich-text` + `shared/utils/rich-text.ts` (`tokenizeRichText`) render `#hashtag` -> `/tags/:tag` (lower-cased) and
+  `@name` -> `/users/:id` (only if `name` is in the post's `mentions`). Never `[innerHTML]`. Rules must match the backend:
+  hashtag `#[\p{L}\p{N}_]{1,50}` not preceded by `[\p{L}\p{N}_&/]` and containing a letter; mention
+  `@[\p{L}\p{N}_.-]{3,30}` (trailing `.`/`-` trimmed) not preceded by `[\p{L}\p{N}_.@-]`.
+## Reposts and quotes
+
+- `Post` has `type` (`POST|REPOST|QUOTE`), `repostsCount`, `quotesCount`, `viewerReposted`, `original` (one level; all optional,
+  fall back to `POST`/0/false). `PostService.repost/undoRepost/quote` (the old `share` is gone); `undoRepost(id)` takes the ORIGINAL id.
+- `ui-post-card`: `REPOST` = banner "<reposter> reposted" + the FULL card of `original` (reactions, counts, menus, comments all act
+  on the original, via `actionTarget()` in `shared/utils/post-state.ts`); `QUOTE` = quote text + quieter embedded card of `original`
+  (or "Original post unavailable"); a REPOST without `original` renders nothing. Repost menu: Repost/Undo repost + Quote (inline
+  composer, required, `ui-char-counter`, submit disabled when blank/over 500).
+- Feed/tag state updates go through `patchPost` / `removePost` / `prependUnique` (update every item whose id or `original.id` matches;
+  new items are deduped by id against the SSE copy; `allPosts` merge unchanged). Repost/undo requests are guarded per original id.
+- SSE `new-post` carries `type`, `originalAuthorId`, nested `original` (mapped in `FeedSseService`).
+- Test ids: `repost-btn`, `repost-action`, `undo-repost-action`, `quote-action`, `quote-input`, `quote-submit`, `quote-counter`,
+  `repost-banner`, `quote-embed`, `quote-unavailable`, `repost-count`, `quote-count`. E2E: `e2e/reposts-quotes.spec.ts` (serial).
+- Quote composer: `PostQuoteEvent.done(success)` — the card keeps the composer open with the text while the request is in flight
+  (`quoting()` disables submit) and closes/clears only on `done(true)`; every `(quote)` handler MUST call `done` on success AND error.
+- Comments: `shared/utils/post-comments.ts` (`PostComments`, create in a field initializer) = comment sections keyed by the original
+  id; used by `TagFeedComponent` (`FeedComponent` still has its own inline copy). Test ids: `post-comment-toggle`, `comment-count`.
+- No unit-test runner is set up (no spec files); coverage is via E2E (`e2e/hashtags-mentions.spec.ts`).
+
 ## Routes
 
 ```typescript
 ''              → redirect to 'feed'
-'feed'          → FeedComponent
-'login'         → LoginComponent  (guarded: redirectIfAuthenticated)
-'create-profile'→ CreateProfileComponent
-'users/:profileId' → UserProfileComponent
+'feed'          → FeedComponent          (authGuard)
+'login'         → LoginComponent         (redirectIfAuthenticatedGuard)
+'create-profile'→ CreateProfileComponent (redirectIfAuthenticatedGuard)
+'users/:profileId' → UserProfileComponent (authGuard)
+'tags/:tag'     → TagFeedComponent       (authGuard; GET /hashtags/{tag}/posts, cursor Load more, no SSE)
+'settings'      → SettingsComponent      (authGuard)
 '**'            → redirect to 'feed'
 ```
+
+`authGuard` (user AND token present, else `/login`); a 401 from the API additionally clears the session via `authInterceptor`.
+
+## E2E (Playwright)
+
+`npm run e2e` (needs docker infra + backend running; the dev server is started by `playwright.config.ts`). Pitfalls learned:
+- After a tab/scope switch wait for the **SSE stream response** (`page.waitForResponse(/feed\/stream.*scope=X/)`), not for the
+  "Live updates active" text — it can still show the previous stream's state and a post created next would be missed.
+- Never `click()` an element that disappears because of the click (e.g. last "Load more"): Playwright retries on the vanished
+  element until the test timeout. Use `dispatchEvent('click')` and wait for the network response instead.
+- "For you" is the global feed with page size 20; assertions on specific posts there are only safe right after creating them.
+  Specs that seed many posts run serially (`test.describe.configure({ mode: 'serial' })`).
+- `playwright.config.ts` keeps `trace: 'retain-on-failure'` + `screenshot: 'only-on-failure'` (see `test-results/`, `npx playwright show-trace`).
+- After `Escape` on a mat-menu wait for its items to be gone (`toHaveCount(0)`) before reopening: the closing panel is still in the DOM
+  and a test-id locator would match two items (strict mode violation).
+- Right after registration a user's Neo4j node appears asynchronously: `follow()` in `e2e/support/api.ts` retries on 404.
 
 ## Running
 
