@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -12,6 +12,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { RichTextComponent } from '../rich-text/rich-text.component';
 import { CharCounterComponent } from '../char-counter/char-counter.component';
+import { MediaPickerComponent } from '../media-picker/media-picker.component';
+import { PostMediaComponent } from '../post-media/post-media.component';
+import { PostMedia } from '../../../core/models/post.model';
 import { PostMention } from '../../utils/rich-text';
 import { isValidPostText } from '../../utils/post-limit';
 import { ReactionBarComponent, ReactionEvent, ReactionType } from '../reaction-bar/reaction-bar.component';
@@ -23,6 +26,7 @@ export interface PostCardData {
   authorAvatarUrl?: string;
   content: string;
   imageUrl?: string;
+  media?: PostMedia[];
   likesCount: number;
   dislikesCount: number;
   commentsCount: number;
@@ -48,6 +52,7 @@ export interface PostEditEvent {
 export interface PostQuoteEvent {
   postId: string;
   comment: string;
+  mediaIds?: string[];
   /** The handler MUST call this when the request settles: true closes + clears the composer, false keeps the text for a retry. */
   done: (success: boolean) => void;
 }
@@ -59,6 +64,7 @@ export interface PostQuoteEvent {
     CommonModule, FormsModule, RouterLink, MatCardModule, MatDividerModule,
     MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule,
     MatFormFieldModule, MatInputModule, ReactionBarComponent, RichTextComponent, CharCounterComponent,
+    MediaPickerComponent, PostMediaComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -131,11 +137,13 @@ export interface PostQuoteEvent {
                   <a class="quote-author-name" [routerLink]="['/users', o.authorId]">{{ o.authorUsername }}</a>
                 </div>
                 <p class="quote-text"><ui-rich-text [text]="o.content" [mentions]="o.mentions" [hashtags]="null" /></p>
+                <ui-post-media [media]="o.media" [authorUsername]="o.authorUsername" [compact]="true" />
               </div>
             } @else {
               <div class="quote-embed quote-unavailable" data-testid="quote-unavailable">Original post unavailable</div>
             }
           }
+          <ui-post-media [media]="t.media" [authorUsername]="t.authorUsername" />
           @if (t.imageUrl) {
             <img class="post-image" [src]="t.imageUrl" alt="Post image" />
           }
@@ -194,16 +202,17 @@ export interface PostQuoteEvent {
 
       <!-- Inline quote composer -->
       @if (showQuoteForm()) {
-        <div class="quote-form">
+        <div class="quote-form" data-testid="quote-form">
           <mat-form-field appearance="outline" class="quote-field">
             <mat-label>Add your comment</mat-label>
             <input matInput data-testid="quote-input" [(ngModel)]="quoteComment" />
           </mat-form-field>
           <ui-char-counter data-testid="quote-counter" [text]="quoteComment" />
+          <ui-media-picker #quotePicker />
           <div class="quote-actions">
             <button mat-button (click)="showQuoteForm.set(false)">Cancel</button>
             <button mat-flat-button color="primary" data-testid="quote-submit"
-                    [disabled]="quoting() || !isValidPostText(quoteComment)" (click)="confirmQuote()">Quote</button>
+                    [disabled]="quoting() || !isValidPostText(quoteComment) || quotePicker.blocked()" (click)="confirmQuote()">Quote</button>
           </div>
         </div>
       }
@@ -278,6 +287,7 @@ export class PostCardComponent {
   quoteComment = '';
   /** quote request in flight: the composer stays open and submit is disabled */
   quoting = signal(false);
+  private readonly quotePicker = viewChild(MediaPickerComponent);
 
   protected readonly isValidPostText = isValidPostText;
 
@@ -320,16 +330,20 @@ export class PostCardComponent {
   }
 
   confirmQuote(): void {
-    if (this.quoting() || !isValidPostText(this.quoteComment)) return;
+    const picker = this.quotePicker();
+    if (this.quoting() || !isValidPostText(this.quoteComment) || picker?.blocked()) return;
     this.quoting.set(true);
+    const mediaIds = picker?.readyIds() ?? [];
     this.quote.emit({
       postId: this.target().id,
       comment: this.quoteComment.trim(),
+      mediaIds: mediaIds.length ? mediaIds : undefined,
       done: success => {
         this.quoting.set(false);
         if (success) {
           this.showQuoteForm.set(false);
           this.quoteComment = '';
+          picker?.clear();
         }
       },
     });

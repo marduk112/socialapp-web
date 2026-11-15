@@ -228,7 +228,7 @@ export class TagFeedComponent {
   }
 
   protected onQuote(event: PostQuoteEvent): void {
-    this.postService.quote(event.postId, { comment: event.comment }).subscribe({
+    this.postService.quote(event.postId, { comment: event.comment, mediaIds: event.mediaIds }).subscribe({
       next: item => {
         const count = item.original?.quotesCount;
         this.posts.update(posts => patchPost(posts, event.postId, p => ({ ...p, quotesCount: count ?? (p.quotesCount ?? 0) + 1 })));

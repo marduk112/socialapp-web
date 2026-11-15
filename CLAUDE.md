@@ -148,6 +148,19 @@ ngOnInit() {
   id; used by `TagFeedComponent` (`FeedComponent` still has its own inline copy). Test ids: `post-comment-toggle`, `comment-count`.
 - No unit-test runner is set up (no spec files); coverage is via E2E (`e2e/hashtags-mentions.spec.ts`).
 
+## Post images
+
+- `MediaService` (`upload(file)` = multipart `POST /media` -> `{id,url,width,height}`; `validate(file)` = client pre-check: jpeg/png/gif/webp, <= 5 MB).
+  `Post.media?: PostMedia[]` (missing = []; immutable after create, no edit UI); `createPost/quote` take optional `mediaIds` (max 4).
+- `ui-media-picker` (shared/components/media-picker): hidden file input + "Add image", uploads each file immediately, per-item state
+  `data-state` uploading|ready|failed, remove button. Owner reads `readyIds()` / `blocked()` (template ref or `viewChild`) and calls `clear()`
+  on success only (failure keeps previews + text). Used by the feed composer (`compose-card`) and the quote composer (`quote-form`);
+  test ids `media-input`, `media-add-btn`, `media-preview`, `media-remove`, `media-error` repeat per composer, so scope them in E2E.
+- `ui-post-media` (shared/components/post-media): grid (1 / 2 / 2x2), lazy `<img>` with width/height when known, `(error)` hides the image,
+  click opens `ui-media-lightbox` (Material dialog, Escape closes). Test ids `post-media`, `post-media-img`, `media-lightbox`. Shown for the
+  card target (REPOST = original) and, compact, inside quote embeds (own media is `mat-card-content > ui-post-media`). `FeedSseService` maps `media`.
+- E2E: `e2e/media.spec.ts` (serial), helpers `uploadImage`, `IMAGES` in `e2e/support/api.ts`.
+
 ## Notifications
 
 - `NotificationService` (core/services, root): HTTP `list/unreadCount/markRead` + its own EventSource on

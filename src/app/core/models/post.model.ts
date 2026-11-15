@@ -3,6 +3,13 @@ import { PostMention } from '../../shared/utils/rich-text';
 export type ReactionType = 'LIKE' | 'DISLIKE';
 export type PostType = 'POST' | 'REPOST' | 'QUOTE';
 
+export interface PostMedia {
+  id: string;
+  url: string;
+  width?: number | null;
+  height?: number | null;
+}
+
 export interface Post {
   id: string;
   authorId: string;
@@ -10,6 +17,8 @@ export interface Post {
   authorAvatarUrl?: string;
   content: string;
   imageUrl?: string;
+  /** attached images (immutable after create); missing = [] */
+  media?: PostMedia[];
   likesCount: number;
   dislikesCount: number;
   commentsCount: number;
@@ -46,6 +55,8 @@ export interface FeedPage {
 export interface CreatePostRequest {
   content: string;
   imageUrl?: string;
+  /** ids of uploaded media (POST /media), max 4 */
+  mediaIds?: string[];
 }
 
 export interface UpdatePostRequest {
@@ -55,6 +66,7 @@ export interface UpdatePostRequest {
 
 export interface QuotePostRequest {
   comment: string;
+  mediaIds?: string[];
 }
 
 export interface Comment {
@@ -89,6 +101,7 @@ export interface PostCreatedSseEvent {
   authorAvatarUrl?: string;
   content: string;
   imageUrl?: string;
+  media?: PostMedia[];
   // present when the new post is a repost / quote of another post
   originalPostId?: string | null;
   originalAuthorUsername?: string | null;

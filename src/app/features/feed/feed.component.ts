@@ -6,6 +6,7 @@ import {
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -25,6 +26,7 @@ import { FeedSseService } from '../../core/services/feed-sse.service';
 import { CurrentUserService } from '../../core/services/current-user.service';
 import { Post, Comment, FeedScope, ReactionType } from '../../core/models/post.model';
 
+import { MediaPickerComponent } from '../../shared/components/media-picker/media-picker.component';
 import { CharCounterComponent } from '../../shared/components/char-counter/char-counter.component';
 import { isValidPostText } from '../../shared/utils/post-limit';
 import { actionTarget, patchPost, prependUnique, removePost } from '../../shared/utils/post-state';
@@ -49,6 +51,7 @@ import { CommentSectionComponent, AddCommentEvent, EditCommentEvent, DeleteComme
     MatProgressSpinnerModule,
     PostCardComponent,
     CharCounterComponent,
+    MediaPickerComponent,
     CommentSectionComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,7 +70,7 @@ import { CommentSectionComponent, AddCommentEvent, EditCommentEvent, DeleteComme
 
       <!-- Compose card -->
       @if (currentUser.user()) {
-        <mat-card class="compose-card">
+        <mat-card class="compose-card" data-testid="compose-card">
           <mat-card-content>
             <mat-form-field appearance="outline" class="compose-field">
               <mat-label>What's on your mind, {{ currentUser.user()!.username }}?</mat-label>
@@ -75,10 +78,11 @@ import { CommentSectionComponent, AddCommentEvent, EditCommentEvent, DeleteComme
                         [disabled]="submitting()" (keydown.ctrl.enter)="submitPost()"></textarea>
             </mat-form-field>
             <ui-char-counter data-testid="compose-counter" [text]="newPostContent" />
+            <ui-media-picker #composePicker />
           </mat-card-content>
           <mat-card-actions align="end">
             <button mat-flat-button color="primary"
-                    [disabled]="!isValidPostText(newPostContent) || submitting()"
+                    [disabled]="!isValidPostText(newPostContent) || submitting() || composePicker.blocked()"
                     (click)="submitPost()">
               <mat-icon>send</mat-icon> Post
             </button>
@@ -193,6 +197,7 @@ export class FeedComponent implements OnInit, OnDestroy {
   private loadGeneration = 0;
   protected readonly submitting = signal(false);
   protected newPostContent = '';
+  private readonly composePicker = viewChild(MediaPickerComponent);
   protected readonly isValidPostText = isValidPostText;
   protected readonly actionTarget = actionTarget;
   /** the toggle patches both the persisted list and the live SSE items (allPosts merge stays untouched) */
@@ -283,13 +288,16 @@ export class FeedComponent implements OnInit, OnDestroy {
 
   protected submitPost(): void {
     const content = this.newPostContent.trim();
-    if (!isValidPostText(content) || !this.currentUser.user()) return;
+    const picker = this.composePicker();
+    if (!isValidPostText(content) || !this.currentUser.user() || picker?.blocked()) return;
 
     this.submitting.set(true);
-    this.postService.createPost({ content }).subscribe({
+    const mediaIds = picker?.readyIds() ?? [];
+    this.postService.createPost(mediaIds.length ? { content, mediaIds } : { content }).subscribe({
       next: post => {
         this._posts.update(posts => [post, ...posts]);
         this.newPostContent = '';
+        picker?.clear();
         this.submitting.set(false);
       },
       error: () => {
@@ -383,7 +391,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       event.done(false);
       return;
     }
-    this.postService.quote(event.postId, { comment: event.comment }).subscribe({
+    this.postService.quote(event.postId, { comment: event.comment, mediaIds: event.mediaIds }).subscribe({
       next: item => {
         const count = item.original?.quotesCount;
         this._posts.update(posts => prependUnique(

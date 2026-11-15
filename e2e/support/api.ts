@@ -56,13 +56,42 @@ export interface ApiPost {
   viewerReposted?: boolean;
   bookmarked?: boolean;
   original?: ApiPost | null;
+  media?: ApiMedia[];
 }
+export interface ApiMedia { id: string; url: string; width: number | null; height: number | null; }
 export interface ApiComment { id: string; content: string; }
 
-export async function createPost(token: string, content: string): Promise<ApiPost> {
+export async function createPost(token: string, content: string, mediaIds?: string[]): Promise<ApiPost> {
   return withApi(async ctx =>
-    ok<ApiPost>(await ctx.post(`${API}/posts`, { data: { content }, headers: auth(token) }), 'createPost'));
+    ok<ApiPost>(await ctx.post(`${API}/posts`,
+      { data: mediaIds ? { content, mediaIds } : { content }, headers: auth(token) }), 'createPost'));
 }
+
+/** Raw POST /posts (no assertion on the status): for negative tests. */
+export async function createPostRaw(token: string, content: string, mediaIds: string[]): Promise<number> {
+  return withApi(async ctx =>
+    (await ctx.post(`${API}/posts`, { data: { content, mediaIds }, headers: auth(token) })).status());
+}
+
+/** Uploads an image via multipart (field `file`); throws unless the backend answers 201. */
+export async function uploadImage(token: string, name: string, bytes: Buffer, mimeType = 'image/png'): Promise<ApiMedia> {
+  return withApi(async ctx =>
+    ok<ApiMedia>(await ctx.post(`${API}/media`, {
+      multipart: { file: { name, mimeType, buffer: bytes } }, headers: auth(token),
+    }), 'uploadImage'));
+}
+
+export async function getPost(token: string, id: string): Promise<ApiPost> {
+  return withApi(async ctx => ok<ApiPost>(await ctx.get(`${API}/posts/${id}`, { headers: auth(token) }), 'getPost'));
+}
+
+/** Tiny valid images (1x1) for upload tests. */
+export const IMAGES = {
+  png: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'),
+  gif: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+  jpeg: Buffer.from('/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAAaADAAQAAAABAAAAAQAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/8AAEQgAAQABAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/bAEMAAgICAgICAwICAwUDAwMFBgUFBQUGCAYGBgYGCAoICAgICAgKCgoKCgoKCgwMDAwMDA4ODg4ODw8PDw8PDw8PD//bAEMBAgICBAQEBwQEBxALCQsQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEP/dAAQAAf/aAAwDAQACEQMRAD8A+mKKKK/Kz/QA/9k=', 'base64'),
+  webp: Buffer.from('UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==', 'base64'),
+};
 
 export async function deletePost(token: string, postId: string): Promise<void> {
   await withApi(async ctx => {
@@ -85,10 +114,10 @@ export async function undoRepost(token: string, postId: string): Promise<void> {
   });
 }
 
-export async function quote(token: string, postId: string, comment: string): Promise<ApiPost> {
+export async function quote(token: string, postId: string, comment: string, mediaIds?: string[]): Promise<ApiPost> {
   return withApi(async ctx =>
     ok<ApiPost>(await ctx.post(`${API}/posts/${postId}/quote`,
-      { data: { comment }, headers: auth(token) }), 'quote'));
+      { data: mediaIds ? { comment, mediaIds } : { comment }, headers: auth(token) }), 'quote'));
 }
 
 export async function createComment(token: string, postId: string, content: string, parentCommentId?: string): Promise<ApiComment> {
