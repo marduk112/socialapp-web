@@ -25,6 +25,10 @@ import { mergeNotifications, notificationLink } from './shared/utils/notificatio
         <mat-icon>dynamic_feed</mat-icon> Feed
       </a>
       @if (currentUser.user(); as user) {
+        <a mat-icon-button routerLink="/bookmarks" routerLinkActive="active-link" aria-label="Saved posts"
+           data-testid="nav-bookmarks">
+          <mat-icon>bookmark</mat-icon>
+        </a>
         <button mat-icon-button #bellTrigger="matMenuTrigger" [matMenuTriggerFor]="notifMenu"
                 (menuOpened)="onBellOpened()" aria-label="Notifications" data-testid="notif-bell">
           <mat-icon>notifications</mat-icon>

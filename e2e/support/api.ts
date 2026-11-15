@@ -54,6 +54,7 @@ export interface ApiPost {
   repostsCount?: number;
   quotesCount?: number;
   viewerReposted?: boolean;
+  bookmarked?: boolean;
   original?: ApiPost | null;
 }
 export interface ApiComment { id: string; content: string; }
@@ -197,4 +198,32 @@ export async function registerUsers(count: number, chunk = 5): Promise<TestUser[
     users.push(...await Promise.all(Array.from({ length: Math.min(chunk, count - i) }, () => registerUser())));
   }
   return users;
+}
+
+/** Idempotent (204). */
+export async function bookmark(token: string, postId: string): Promise<void> {
+  await withApi(async ctx => {
+    const res = await ctx.put(`${API}/posts/${postId}/bookmark`, { headers: auth(token) });
+    if (!res.ok()) throw new Error(`bookmark failed: ${res.status()}`);
+  });
+}
+
+export async function unbookmark(token: string, postId: string): Promise<void> {
+  await withApi(async ctx => {
+    const res = await ctx.delete(`${API}/posts/${postId}/bookmark`, { headers: auth(token) });
+    if (!res.ok()) throw new Error(`unbookmark failed: ${res.status()}`);
+  });
+}
+
+/** One page of the caller's bookmarks (newest bookmarked first). */
+export async function getBookmarkPage(token: string, cursor?: string | null, size = 20): Promise<ApiFeedPage> {
+  const params: Record<string, string | number> = { size };
+  if (cursor) params['cursor'] = cursor;
+  return withApi(async ctx =>
+    ok(await ctx.get(`${API}/bookmarks`, { params, headers: auth(token) }), 'getBookmarks'));
+}
+
+/** First page items only. */
+export async function getBookmarks(token: string, size = 20): Promise<ApiPost[]> {
+  return (await getBookmarkPage(token, undefined, size)).items;
 }

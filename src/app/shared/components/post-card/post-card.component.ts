@@ -30,6 +30,7 @@ export interface PostCardData {
   repostsCount?: number;
   quotesCount?: number;
   viewerReposted?: boolean;
+  bookmarked?: boolean;
   original?: PostCardData | null;
   createdAt: string;
   updatedAt?: string;
@@ -166,6 +167,15 @@ export interface PostQuoteEvent {
           <mat-icon class="quote-count-icon">format_quote</mat-icon>
           <span class="count" data-testid="quote-count">{{ t.quotesCount }}</span>
         }
+        <span class="spacer"></span>
+        <button mat-icon-button data-testid="bookmark-btn"
+                [attr.aria-label]="t.bookmarked ? 'Remove bookmark' : 'Save post'"
+                [attr.data-bookmarked]="t.bookmarked ? 'true' : 'false'"
+                [class.bookmarked]="t.bookmarked"
+                [matTooltip]="t.bookmarked ? 'Remove bookmark' : 'Save post'"
+                (click)="bookmark.emit()">
+          <mat-icon>{{ t.bookmarked ? 'bookmark' : 'bookmark_border' }}</mat-icon>
+        </button>
         <mat-menu #repostMenu="matMenu">
           @if (t.viewerReposted) {
             <button mat-menu-item data-testid="undo-repost-action" (click)="undoRepost.emit(t.id)">
@@ -227,7 +237,8 @@ export interface PostQuoteEvent {
     .quote-author-name:hover { text-decoration: underline; }
     .quote-text { margin: 0; font-size: 14px; color: #444; white-space: pre-wrap; }
     .quote-unavailable { color: #888; font-style: italic; font-size: 14px; }
-    .reposted { color: #3f51b5; }
+    .reposted, .bookmarked { color: #3f51b5; }
+    .spacer { flex: 1; }
     .quote-count-icon { font-size: 18px; width: 18px; height: 18px; color: #666; }
     .delete-item { color: #d32f2f; }
     mat-card-actions { display: flex; align-items: center; gap: 4px; }
@@ -247,6 +258,8 @@ export class PostCardComponent {
   undoRepost = output<string>();
   quote = output<PostQuoteEvent>();
   toggleComments = output<string>();
+  /** toggles the bookmark of the action target (the handler knows the item and flips its state) */
+  bookmark = output<void>();
 
   /** The post the card shows and acts on: the original inside a REPOST, otherwise the item itself. */
   protected readonly isRepost = computed(() => this.post().type === 'REPOST');

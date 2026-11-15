@@ -134,6 +134,11 @@ export class FeedSseService implements OnDestroy {
     this._livePosts.update(posts => posts.filter(p => !matches(p)));
   }
 
+  /** Applies a transformation to the live items (e.g. a bookmark toggle on a post that only arrived via SSE). */
+  updateLivePosts(fn: (posts: Post[]) => Post[]): void {
+    this._livePosts.update(fn);
+  }
+
   clearLivePosts(): void {
     this._livePosts.set([]);
   }

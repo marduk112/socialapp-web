@@ -18,6 +18,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { PostBookmarks } from '../../shared/utils/post-bookmarks';
+import { BookmarkService } from '../../core/services/bookmark.service';
 import { PostService } from '../../core/services/post.service';
 import { FeedSseService } from '../../core/services/feed-sse.service';
 import { CurrentUserService } from '../../core/services/current-user.service';
@@ -120,6 +122,7 @@ import { CommentSectionComponent, AddCommentEvent, EditCommentEvent, DeleteComme
           (repost)="onRepost($event)"
           (undoRepost)="onUndoRepost($event)"
           (quote)="onQuote($event)"
+          (bookmark)="bookmarks.toggle(post)"
           (toggleComments)="onToggleComments($event)" />
 
         <!-- Comment section (shown when toggled); a REPOST item's comments belong to the original -->
@@ -192,6 +195,11 @@ export class FeedComponent implements OnInit, OnDestroy {
   protected newPostContent = '';
   protected readonly isValidPostText = isValidPostText;
   protected readonly actionTarget = actionTarget;
+  /** the toggle patches both the persisted list and the live SSE items (allPosts merge stays untouched) */
+  protected readonly bookmarks = new PostBookmarks(inject(BookmarkService), this.snackBar, fn => {
+    this._posts.update(fn);
+    this.feedSseService.updateLivePosts(fn);
+  });
   /** original ids with an in-flight repost/undo request (double clicks are ignored) */
   private readonly repostPending = new Set<string>();
 

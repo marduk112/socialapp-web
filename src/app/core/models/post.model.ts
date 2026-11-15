@@ -21,6 +21,8 @@ export interface Post {
   repostsCount?: number;
   quotesCount?: number;
   viewerReposted?: boolean;
+  /** viewer-specific; missing (e.g. SSE live posts) = false */
+  bookmarked?: boolean;
   originalAuthorId?: string | null;
   /** Full original (one level only, its own `original` is null) for REPOST and QUOTE; null if deleted / plain post */
   original?: Post | null;

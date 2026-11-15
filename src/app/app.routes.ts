@@ -52,6 +52,12 @@ export const routes: Routes = [
       import('./features/notifications/notifications.component').then(m => m.NotificationsComponent),
   },
   {
+    path: 'bookmarks',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/bookmarks/bookmarks.component').then(m => m.BookmarksComponent),
+  },
+  {
     path: 'settings',
     canActivate: [authGuard],
     loadComponent: () =>

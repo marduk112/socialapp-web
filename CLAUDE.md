@@ -164,6 +164,19 @@ ngOnInit() {
 - E2E pitfalls: notifications are async (outbox -> Kafka) so use `expect.poll` on `unreadCount`, never sleeps; wait for the
   `notifications/stream` response before a live-SSE action; absence ("self actions never notify") is proven with a later foreign action as barrier.
 
+## Bookmarks (private)
+
+- `BookmarkService` (`add/remove` = `PUT/DELETE /posts/{id}/bookmark`, idempotent 204; `list(cursor?, size=20)` = `GET /bookmarks` -> `FeedPage`).
+  `Post.bookmarked?` is viewer-specific; missing (SSE live posts) = false.
+- `ui-post-card` bookmark button (`bookmark-btn`, `data-bookmarked`, aria-label "Save post"/"Remove bookmark") emits `(bookmark)`;
+  every page wires it to `PostBookmarks.toggle(post)` (`shared/utils/post-bookmarks.ts`, create in a field initializer): optimistic
+  `patchPost`, reverted + snackbar on error, in-flight guard per target id (double click = one request). Target = `actionTarget(post)`
+  (original inside a REPOST), same as likes. `FeedComponent` passes an updater that patches `_posts` AND the SSE live posts
+  (`FeedSseService.updateLivePosts`), leaving the `allPosts` merge intact. User profile renders no post cards (nothing to wire).
+- `/bookmarks` -> `BookmarksComponent` (authGuard): keyset "Load more" (dedupe by id, `loadGeneration`, `loadingMore` reset), an
+  un-bookmarked card is removed after the server confirmed. Toolbar link `nav-bookmarks`. Test ids: `bookmarks-page`, `bookmarks-empty`
+  ("No saved posts yet."), `bookmarks-load-more`. E2E: `e2e/bookmarks.spec.ts` (serial). The last "Load more" vanishes: use `dispatchEvent('click')`.
+
 ## Routes
 
 ```typescript
@@ -175,6 +188,7 @@ ngOnInit() {
 'tags/:tag'     → TagFeedComponent       (authGuard; GET /hashtags/{tag}/posts, cursor Load more, no SSE)
 'posts/:id'     → PostDetailComponent    (authGuard; GET /posts/{id}, comments open by default, 404 -> "Post not found.")
 'notifications' → NotificationsComponent (authGuard; keyset Load more + live items prepended)
+'bookmarks'     → BookmarksComponent     (authGuard; keyset Load more, GET /bookmarks)
 'settings'      → SettingsComponent      (authGuard)
 '**'            → redirect to 'feed'
 ```

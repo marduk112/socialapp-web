@@ -9,6 +9,8 @@ import { CurrentUserService } from '../../core/services/current-user.service';
 import { Post, ReactionType } from '../../core/models/post.model';
 import { PostCardComponent, PostEditEvent, PostQuoteEvent } from '../../shared/components/post-card/post-card.component';
 import { actionTarget, patchPost } from '../../shared/utils/post-state';
+import { PostBookmarks } from '../../shared/utils/post-bookmarks';
+import { BookmarkService } from '../../core/services/bookmark.service';
 import { PostComments } from '../../shared/utils/post-comments';
 import { CommentSectionComponent } from '../../shared/components/comment-section/comment-section.component';
 import { ReactionEvent } from '../../shared/components/reaction-bar/reaction-bar.component';
@@ -35,6 +37,7 @@ import { ReactionEvent } from '../../shared/components/reaction-bar/reaction-bar
           (repost)="onRepost($event)"
           (undoRepost)="onUndoRepost($event)"
           (quote)="onQuote($event)"
+          (bookmark)="bookmarks.toggle(post)"
           (toggleComments)="comments.toggle($event)" />
 
         @let targetId = actionTarget(post).id;
@@ -76,6 +79,7 @@ export class PostDetailComponent {
   private loadGeneration = 0;
   private readonly repostPending = new Set<string>();
   protected readonly actionTarget = actionTarget;
+  protected readonly bookmarks = new PostBookmarks(inject(BookmarkService), this.snackBar, fn => this.posts.update(fn));
   protected readonly comments = new PostComments(this.postService, this.snackBar, (postId, delta) =>
     this.posts.update(posts => patchPost(posts, postId, p => ({ ...p, commentsCount: Math.max(0, p.commentsCount + delta) }))));
 

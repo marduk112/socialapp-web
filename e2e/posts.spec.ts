@@ -19,7 +19,7 @@ test.describe('posts', () => {
     await page.getByRole('menuitem', { name: /Edit/ }).click();
     // while editing the content is inside a textarea, so `card` (matched by text) no longer resolves
     await page.getByLabel('Edit post').fill(edited);
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.locator('ui-post-card').filter({ hasText: edited })).toHaveCount(1);
     await expect(page.getByText('(edited)').first()).toBeVisible();
 
