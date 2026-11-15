@@ -148,6 +148,22 @@ ngOnInit() {
   id; used by `TagFeedComponent` (`FeedComponent` still has its own inline copy). Test ids: `post-comment-toggle`, `comment-count`.
 - No unit-test runner is set up (no spec files); coverage is via E2E (`e2e/hashtags-mentions.spec.ts`).
 
+## Notifications
+
+- `NotificationService` (core/services, root): HTTP `list/unreadCount/markRead` + its own EventSource on
+  `/notifications/stream?access_token=` (events `connected`, `notification`), opened by an `effect` on the token (closed + state reset
+  on logout/user switch; retries with backoff only when the browser gave up, i.e. readyState CLOSED). Signals `unread`, `latest`
+  (live items, newest first, deduped by id). `unread` is refetched on every `connected` (covers missed events; `max()` with live
+  increments that raced the request) and incremented by live events. Marking read = HTTP `markRead(ids?)` + `readLocally(ids|null, unreadDecrement)`.
+- Bell in `app.component.ts` (only when logged in; own `.bell-badge` span, 99+ cap, hidden at 0): menu fetches the latest 10 on open and
+  merges them with `latest` (`mergeNotifications`, deduped by id). Rows = `ui-notification-item` (`data-unread` true/false).
+  Sentences/links live in `shared/utils/notification-utils.ts` (`notificationText`, `notificationLink`: FOLLOW/no postId -> `/users/:actorId`, else `/posts/:postId`).
+- Clicking a notification marks it read optimistically and navigates. The page uses the same load-generation / dedupe / never-stuck-disabled rules as the feed.
+- Test ids: `notif-bell`, `notif-badge`, `notif-menu`, `notif-item` (+`data-unread`), `notif-mark-all` (menu AND page), `notif-see-all`,
+  `notifications-page`, `notif-load-more`, `notifications-empty`, `post-detail`, `post-not-found`. E2E: `e2e/notifications.spec.ts` (serial).
+- E2E pitfalls: notifications are async (outbox -> Kafka) so use `expect.poll` on `unreadCount`, never sleeps; wait for the
+  `notifications/stream` response before a live-SSE action; absence ("self actions never notify") is proven with a later foreign action as barrier.
+
 ## Routes
 
 ```typescript
@@ -157,6 +173,8 @@ ngOnInit() {
 'create-profile'→ CreateProfileComponent (redirectIfAuthenticatedGuard)
 'users/:profileId' → UserProfileComponent (authGuard)
 'tags/:tag'     → TagFeedComponent       (authGuard; GET /hashtags/{tag}/posts, cursor Load more, no SSE)
+'posts/:id'     → PostDetailComponent    (authGuard; GET /posts/{id}, comments open by default, 404 -> "Post not found.")
+'notifications' → NotificationsComponent (authGuard; keyset Load more + live items prepended)
 'settings'      → SettingsComponent      (authGuard)
 '**'            → redirect to 'feed'
 ```

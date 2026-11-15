@@ -150,3 +150,51 @@ export async function getHashtagPage(token: string, tag: string, cursor?: string
   return withApi(async ctx =>
     ok(await ctx.get(`${API}/hashtags/${encodeURIComponent(tag)}/posts`, { params, headers: auth(token) }), 'getHashtagPage'));
 }
+
+export interface ApiNotification {
+  id: string;
+  type: 'FOLLOW' | 'LIKE' | 'COMMENT' | 'REPLY' | 'MENTION' | 'REPOST' | 'QUOTE';
+  actorId: string;
+  actorUsername: string;
+  postId: string | null;
+  commentId: string | null;
+  snippet: string | null;
+  read: boolean;
+}
+export interface ApiNotificationPage { items: ApiNotification[]; nextCursor: string | null; }
+
+/** First page of the caller's notifications (newest first). */
+export async function getNotifications(token: string, size = 20, cursor?: string | null): Promise<ApiNotificationPage> {
+  const params: Record<string, string | number> = { size };
+  if (cursor) params['cursor'] = cursor;
+  return withApi(async ctx =>
+    ok(await ctx.get(`${API}/notifications`, { params, headers: auth(token) }), 'getNotifications'));
+}
+
+export async function unreadCount(token: string): Promise<number> {
+  return withApi(async ctx =>
+    (await ok<{ count: number }>(await ctx.get(`${API}/notifications/unread-count`, { headers: auth(token) }), 'unreadCount')).count);
+}
+
+export async function markAllRead(token: string): Promise<void> {
+  await withApi(async ctx => {
+    const res = await ctx.post(`${API}/notifications/read`, { data: {}, headers: auth(token) });
+    if (!res.ok()) throw new Error(`markAllRead failed: ${res.status()}`);
+  });
+}
+
+export async function like(token: string, postId: string): Promise<void> {
+  await withApi(async ctx => {
+    const res = await ctx.post(`${API}/posts/${postId}/like`, { headers: auth(token) });
+    if (!res.ok()) throw new Error(`like failed: ${res.status()}`);
+  });
+}
+
+/** Registers `count` users in parallel chunks. */
+export async function registerUsers(count: number, chunk = 5): Promise<TestUser[]> {
+  const users: TestUser[] = [];
+  for (let i = 0; i < count; i += chunk) {
+    users.push(...await Promise.all(Array.from({ length: Math.min(chunk, count - i) }, () => registerUser())));
+  }
+  return users;
+}

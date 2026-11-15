@@ -40,6 +40,18 @@ export const routes: Routes = [
       import('./features/tag/tag-feed.component').then(m => m.TagFeedComponent),
   },
   {
+    path: 'posts/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/post/post-detail.component').then(m => m.PostDetailComponent),
+  },
+  {
+    path: 'notifications',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/notifications/notifications.component').then(m => m.NotificationsComponent),
+  },
+  {
     path: 'settings',
     canActivate: [authGuard],
     loadComponent: () =>
