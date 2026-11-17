@@ -4,6 +4,23 @@ import { API, registerUser, createPost, uniqueCredentials, uniqueSuffix } from '
 const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 test.describe('api security smoke', () => {
+  test("another user's profile does not expose the e-mail; your own does", async () => {
+    const me = await registerUser();
+    const other = await registerUser();
+    const ctx = await pwRequest.newContext();
+    try {
+      const theirs = await (await ctx.get(`${API}/users/${other.id}`, { headers: bearer(me.token) })).json();
+      expect(theirs.username).toBe(other.username);
+      expect(theirs).not.toHaveProperty('email');
+      const byName = await (await ctx.get(`${API}/users`, { params: { username: other.username }, headers: bearer(me.token) })).json();
+      expect(byName).not.toHaveProperty('email');
+      const mine = await (await ctx.get(`${API}/users/${me.id}`, { headers: bearer(me.token) })).json();
+      expect(mine.email).toBe(me.email);
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
   test('no token -> 401 on /feed', async () => {
     const ctx = await pwRequest.newContext();
     expect((await ctx.get(`${API}/feed`)).status()).toBe(401);
