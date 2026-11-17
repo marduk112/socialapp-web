@@ -246,7 +246,15 @@ ngOnInit() {
 - `playwright.config.ts` keeps `trace: 'retain-on-failure'` + `screenshot: 'only-on-failure'` (see `test-results/`, `npx playwright show-trace`).
 - After `Escape` on a mat-menu wait for its items to be gone (`toHaveCount(0)`) before reopening: the closing panel is still in the DOM
   and a test-id locator would match two items (strict mode violation).
+- Generate unique names/tags/texts ONLY with `uniqueSuffix()` (`e2e/support/api.ts`: timestamp + worker index + counter, fixed width). `Date.now()` plus a random
+  suffix collided (`registerUsers()` creates 5 accounts per millisecond -> sporadic 409 "username taken", e.g. notifications "25 notifications").
 - Right after registration a user's Neo4j node appears asynchronously: `follow()` in `e2e/support/api.ts` retries on 404.
+
+## Build setup
+
+- Builders are `@angular/build:application` / `:dev-server` (the old `@angular-devkit/build-angular` is gone, as are `@angular/animations` and
+  `@angular/platform-browser-dynamic`: Material 22 does not need them, and `provideAnimations()` was removed). There is no `test` target (no unit specs).
+- Production budget: initial bundle warns at 600 kB (was 500 kB; the bundle is ~562 kB raw / 130 kB transferred after dropping animations), errors at 1 MB.
 
 ## Running
 

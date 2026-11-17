@@ -11,8 +11,16 @@ export interface TestUser {
   token: string;
 }
 
+let sequence = 0;
+
+/**
+ * Unique across parallel workers AND across calls inside one process: timestamp + worker index + counter, fixed width.
+ * (A random 0..999 suffix collided: registerUsers() creates 5 accounts at the same millisecond, which gave sporadic 409
+ * "username taken" failures, e.g. in notifications.spec.ts "Load more pages through 25 notifications".)
+ */
 export function uniqueSuffix(): string {
-  return `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+  const worker = (process.env['TEST_WORKER_INDEX'] ?? '0').padStart(2, '0');
+  return `${Date.now()}${worker}${String(sequence++ % 10_000).padStart(4, '0')}`;
 }
 
 export function uniqueCredentials(): { username: string; email: string; password: string } {
