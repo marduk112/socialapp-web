@@ -40,6 +40,12 @@ export const routes: Routes = [
       import('./features/tag/tag-feed.component').then(m => m.TagFeedComponent),
   },
   {
+    path: 'search',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/search/search.component').then(m => m.SearchComponent),
+  },
+  {
     path: 'posts/:id',
     canActivate: [authGuard],
     loadComponent: () =>

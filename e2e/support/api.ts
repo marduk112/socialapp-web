@@ -256,3 +256,37 @@ export async function getBookmarkPage(token: string, cursor?: string | null, siz
 export async function getBookmarks(token: string, size = 20): Promise<ApiPost[]> {
   return (await getBookmarkPage(token, undefined, size)).items;
 }
+
+export interface ApiSuggestion { userId: string; username: string; avatarUrl?: string | null; mutualFollowers: number; }
+
+export async function getSuggestions(token: string, limit = 5): Promise<ApiSuggestion[]> {
+  return withApi(async ctx =>
+    ok<ApiSuggestion[]>(await ctx.get(`${API}/social/suggestions`, { params: { limit }, headers: auth(token) }), 'getSuggestions'));
+}
+
+export interface ApiUserHit { id: string; username: string; bio?: string | null; avatarUrl?: string | null; email?: string }
+
+export async function searchPosts(token: string, q: string, cursor?: string | null, size = 20): Promise<ApiFeedPage> {
+  const params: Record<string, string | number> = { q, size };
+  if (cursor) params['cursor'] = cursor;
+  return withApi(async ctx =>
+    ok<ApiFeedPage>(await ctx.get(`${API}/search/posts`, { params, headers: auth(token) }), 'searchPosts'));
+}
+
+export async function searchUsers(token: string, q: string, limit = 10): Promise<ApiUserHit[]> {
+  return withApi(async ctx =>
+    ok<ApiUserHit[]>(await ctx.get(`${API}/search/users`, { params: { q, limit }, headers: auth(token) }), 'searchUsers'));
+}
+
+/** Raw GET (no assertion on the status): for negative tests. `path` is relative to the API root. */
+export async function getStatus(path: string, token?: string): Promise<number> {
+  return withApi(async ctx =>
+    (await ctx.get(`${API}${path}`, { headers: token ? auth(token) : {} })).status());
+}
+
+export interface ApiTrend { tag: string; posts: number; authors: number; }
+
+export async function getTrends(token: string, hours = 24, limit = 10): Promise<ApiTrend[]> {
+  return withApi(async ctx =>
+    ok<ApiTrend[]>(await ctx.get(`${API}/trends/hashtags`, { params: { hours, limit }, headers: auth(token) }), 'getTrends'));
+}

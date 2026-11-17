@@ -21,6 +21,13 @@ import { mergeNotifications, notificationLink } from './shared/utils/notificatio
       <mat-icon>hub</mat-icon>
       <span style="margin-left:8px">SocialApp</span>
       <span style="flex:1"></span>
+      @if (currentUser.user()) {
+        <form class="search-form" role="search" (submit)="onSearch($event, searchBox)">
+          <mat-icon class="search-icon" aria-hidden="true">search</mat-icon>
+          <input #searchBox class="search-input" type="search" name="q" maxlength="100" autocomplete="off"
+                 placeholder="Search" aria-label="Search" data-testid="search-input" />
+        </form>
+      }
       <a mat-button routerLink="/feed" routerLinkActive="active-link">
         <mat-icon>dynamic_feed</mat-icon> Feed
       </a>
@@ -89,6 +96,12 @@ import { mergeNotifications, notificationLink } from './shared/utils/notificatio
     .notif-panel { width: 360px; max-width: 90vw; max-height: 420px; overflow-y: auto; }
     .notif-empty { text-align: center; color: #999; padding: 16px; margin: 0; }
     .active-link { border-bottom: 2px solid white; }
+    .search-form { display: flex; align-items: center; gap: 6px; margin-right: 8px; padding: 0 10px; height: 36px;
+                   border-radius: 18px; background: rgba(255, 255, 255, 0.18); }
+    .search-form:focus-within { background: rgba(255, 255, 255, 0.28); }
+    .search-icon { font-size: 20px; width: 20px; height: 20px; }
+    .search-input { width: 160px; max-width: 30vw; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; }
+    .search-input::placeholder { color: rgba(255, 255, 255, 0.7); }
   `]
 })
 export class AppComponent {
@@ -131,6 +144,19 @@ export class AppComponent {
     }
     this.bellTrigger()?.closeMenu();
     this.router.navigate(notificationLink(n));
+  }
+
+  /** Enter in the toolbar box: `#tag` opens the tag page, anything else the search page. */
+  protected onSearch(event: Event, input: HTMLInputElement): void {
+    event.preventDefault();
+    const q = input.value.trim();
+    if (q === '') return;
+    const tag = /^#([\p{L}\p{N}_]{1,50})$/u.exec(q);
+    if (tag && /\p{L}/u.test(tag[1])) {
+      this.router.navigate(['/tags', tag[1].toLowerCase()]);
+    } else {
+      this.router.navigate(['/search'], { queryParams: { q } });
+    }
   }
 
   protected signOut(): void {

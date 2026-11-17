@@ -8,6 +8,11 @@ export interface UserNode {
   avatarUrl?: string;
 }
 
+export interface FollowSuggestion extends UserNode {
+  /** Followees of the viewer who follow this user; 0 = popularity-based suggestion. */
+  mutualFollowers: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SocialGraphService {
   private readonly api = inject(ApiClient);
@@ -30,5 +35,9 @@ export class SocialGraphService {
 
   isFollowing(followeeId: string): Observable<boolean> {
     return this.api.get<boolean>('/social/is-following', { followeeId });
+  }
+
+  getSuggestions(limit = 5): Observable<FollowSuggestion[]> {
+    return this.api.get<FollowSuggestion[]>('/social/suggestions', { limit });
   }
 }

@@ -30,6 +30,8 @@ import { MediaPickerComponent } from '../../shared/components/media-picker/media
 import { CharCounterComponent } from '../../shared/components/char-counter/char-counter.component';
 import { isValidPostText } from '../../shared/utils/post-limit';
 import { actionTarget, patchPost, prependUnique, removePost } from '../../shared/utils/post-state';
+import { TrendingComponent } from '../../shared/components/trending/trending.component';
+import { WhoToFollowComponent } from '../../shared/components/who-to-follow/who-to-follow.component';
 import { PostCardComponent, PostEditEvent, PostQuoteEvent } from '../../shared/components/post-card/post-card.component';
 import { ReactionEvent } from '../../shared/components/reaction-bar/reaction-bar.component';
 import { CommentSectionComponent, AddCommentEvent, EditCommentEvent, DeleteCommentEvent, CommentReactionEvent } from '../../shared/components/comment-section/comment-section.component';
@@ -50,6 +52,8 @@ import { CommentSectionComponent, AddCommentEvent, EditCommentEvent, DeleteComme
     MatProgressBarModule,
     MatProgressSpinnerModule,
     PostCardComponent,
+    WhoToFollowComponent,
+    TrendingComponent,
     CharCounterComponent,
     MediaPickerComponent,
     CommentSectionComponent,
@@ -88,6 +92,11 @@ import { CommentSectionComponent, AddCommentEvent, EditCommentEvent, DeleteComme
             </button>
           </mat-card-actions>
         </mat-card>
+      }
+
+      @if (currentUser.user()) {
+        <ui-who-to-follow />
+        <ui-trending />
       }
 
       <!-- SSE status bar -->

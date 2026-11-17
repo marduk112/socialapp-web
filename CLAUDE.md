@@ -190,6 +190,30 @@ ngOnInit() {
   un-bookmarked card is removed after the server confirmed. Toolbar link `nav-bookmarks`. Test ids: `bookmarks-page`, `bookmarks-empty`
   ("No saved posts yet."), `bookmarks-load-more`. E2E: `e2e/bookmarks.spec.ts` (serial). The last "Load more" vanishes: use `dispatchEvent('click')`.
 
+## Who to follow
+
+- `SocialGraphService.getSuggestions(limit = 5)` -> `GET /social/suggestions`. `ui-who-to-follow` (shared/components/who-to-follow) is rendered
+  in `FeedComponent` under the compose card (logged-in only); hidden while empty or on error. Row = avatar, profile link, reason
+  ("Followed by N people you follow" | "Popular on SocialApp"), `ui-follow-button` (follow/unfollow in place; the row stays until reload).
+- Test ids: `who-to-follow`, `suggestion`. E2E: `e2e/who-to-follow.spec.ts`, helper `getSuggestions` in `e2e/support/api.ts`.
+
+## Search
+
+- `SearchService` (`searchPosts(q, cursor?, size)` -> `GET /search/posts`, `searchUsers(q, limit)` -> `GET /search/users`).
+  Toolbar box (`app.component.ts`, logged-in only, test id `search-input`): Enter -> `/search?q=`; a lone `#tag` -> `/tags/<tag>`.
+- `/search?q=` -> `SearchComponent` (authGuard): tabs Posts (`search-tab-posts`; post cards with the same handlers as
+  `TagFeedComponent`, keyset "Load more", `loadGeneration`) and People (`search-tab-people`; rows `person` link to `/users/:id`).
+  Both lists load on every `q` change. Test ids: `search-page`, `search-title`, `search-blank`, `search-posts-empty`,
+  `search-people-empty`, `load-more`. E2E: `e2e/search.spec.ts`, helpers `searchPosts`/`searchUsers`/`getStatus` in `e2e/support/api.ts`.
+- The post-card action handlers are now copied in Feed, Tag and Search components; extract a shared helper before adding a fourth.
+
+## Trending
+
+- `TrendsService.getTrendingHashtags(hours = 24, limit = 10)` -> `GET /trends/hashtags`. `ui-trending` (shared/components/trending) is rendered in
+  `FeedComponent` under `ui-who-to-follow` (logged-in only); hidden while empty or on error. Row = `#tag` link to `/tags/:tag` + "N post(s)".
+  Test ids: `trending`, `trend` (NOT `hashtag-link`, which post cards use). E2E: `e2e/trends.spec.ts` (API ranking with `hours=1&limit=20`,
+  because other specs keep adding tags; the UI ordering/plural test mocks the endpoint with `page.route`), helper `getTrends`.
+
 ## Routes
 
 ```typescript
@@ -199,6 +223,7 @@ ngOnInit() {
 'create-profile'→ CreateProfileComponent (redirectIfAuthenticatedGuard)
 'users/:profileId' → UserProfileComponent (authGuard)
 'tags/:tag'     → TagFeedComponent       (authGuard; GET /hashtags/{tag}/posts, cursor Load more, no SSE)
+'search'        → SearchComponent        (authGuard; ?q=, tabs Posts/People)
 'posts/:id'     → PostDetailComponent    (authGuard; GET /posts/{id}, comments open by default, 404 -> "Post not found.")
 'notifications' → NotificationsComponent (authGuard; keyset Load more + live items prepended)
 'bookmarks'     → BookmarksComponent     (authGuard; keyset Load more, GET /bookmarks)
