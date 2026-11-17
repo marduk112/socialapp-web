@@ -67,7 +67,7 @@ interface PickedItem {
     .item[data-state="failed"] img { opacity: .3; }
     .overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
     .failed { color: #d32f2f; font-size: 11px; text-align: center; width: 88px; font-weight: 600; }
-    .remove { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; line-height: 24px; --mdc-fab-small-container-shape: 50%; }
+    .remove { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; line-height: 24px; --mat-fab-small-container-shape: 50%; }
     .remove mat-icon { font-size: 16px; width: 16px; height: 16px; }
   `]
 })
