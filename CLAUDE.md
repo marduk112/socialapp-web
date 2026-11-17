@@ -74,7 +74,7 @@ SSE event names (must match backend exactly):
 - `"connected"` — heartbeat on subscribe
 - `"new-post"` — new post payload (`PostCreatedSseEvent`)
 
-SSE callbacks **must** run inside `ngZone.run()` to trigger Angular change detection.
+The app is **zoneless** (`provideZonelessChangeDetection()` in `app.config.ts`, no `zone.js` dependency or polyfill): change detection is driven by signals, bound listeners and `markForCheck`, so a callback only updates the UI if it sets a signal (or marks the view). All state here is signals; never mutate a plain field in an async callback and expect a refresh. The `ngZone.run(...)` wrappers around SSE callbacks and `router.navigate` are kept (harmless and compatible with zoneless per angular.dev); new code does not need them.
 
 ```typescript
 this.eventSource.addEventListener('new-post', (e) => {
