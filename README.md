@@ -1,5 +1,8 @@
 # socialapp-web
 
+[![CI](https://github.com/marduk112/socialapp-web/actions/workflows/ci.yml/badge.svg)](https://github.com/marduk112/socialapp-web/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Angular frontend of [SocialApp](https://github.com/marduk112/SocialApp).
 
 - **Angular 22**, standalone components, **zoneless** change detection, **signals**, Angular Material

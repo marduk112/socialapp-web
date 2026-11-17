@@ -28,6 +28,7 @@
     "@angular/cli": "^22.2.7",
     "@angular/compiler-cli": "^22.2.6",
     "@playwright/test": "^1.65.1",
+    "@types/node": "^22.20.5",
     "typescript": "~6.0.3"
   }
 }
