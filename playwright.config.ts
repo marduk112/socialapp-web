@@ -19,7 +19,17 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'off',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // following-feed.spec.ts asserts on the first page (20 posts) of the GLOBAL "For you" feed, so it must not run while another
+  // worker is creating posts (media, hashtag, notification specs seed dozens): it runs in its own project after all others.
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /following-feed\.spec\.ts/ },
+    {
+      name: 'global-feed',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /following-feed\.spec\.ts/,
+      dependencies: ['chromium'],
+    },
+  ],
   webServer: {
     command: 'npm start',
     url: 'http://localhost:4200',

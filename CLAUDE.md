@@ -242,6 +242,7 @@ ngOnInit() {
   element until the test timeout. Use `dispatchEvent('click')` and wait for the network response instead.
 - "For you" is the global feed with page size 20; assertions on specific posts there are only safe right after creating them.
   Specs that seed many posts run serially (`test.describe.configure({ mode: 'serial' })`).
+- `following-feed.spec.ts` asserts on the first page of the GLOBAL "For you" feed, so `playwright.config.ts` runs it in its own project `global-feed` AFTER the main `chromium` project (`dependencies`): no other worker creates posts meanwhile. Other specs that assert on the global feed should go there too. (If a main-project test fails, `global-feed` is skipped: fix that first.)
 - `playwright.config.ts` keeps `trace: 'retain-on-failure'` + `screenshot: 'only-on-failure'` (see `test-results/`, `npx playwright show-trace`).
 - After `Escape` on a mat-menu wait for its items to be gone (`toHaveCount(0)`) before reopening: the closing panel is still in the DOM
   and a test-id locator would match two items (strict mode violation).
