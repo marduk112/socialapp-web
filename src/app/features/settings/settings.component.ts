@@ -5,7 +5,6 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -22,10 +21,15 @@ import { CurrentUserService } from '../../core/services/current-user.service';
   selector: 'app-settings',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
-    MatCardModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatIconModule, MatSnackBarModule, MatDividerModule,
-  ],
+    FormsModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatSnackBarModule,
+    MatDividerModule
+],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="settings-wrapper">

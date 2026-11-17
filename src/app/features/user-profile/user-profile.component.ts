@@ -7,7 +7,6 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UserService } from '../../core/services/user.service';
@@ -20,7 +19,7 @@ import { UserCardComponent, UserCardData } from '../../shared/components/user-ca
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [CommonModule, MatSnackBarModule, MatProgressSpinnerModule, UserCardComponent],
+  imports: [MatSnackBarModule, MatProgressSpinnerModule, UserCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="profile-wrapper">
@@ -51,6 +50,8 @@ export class UserProfileComponent implements OnInit {
 
   private readonly _user = signal<User | null>(null);
   private readonly _isFollowing = signal(false);
+  private readonly _followersCount = signal(0);
+  private readonly _followingCount = signal(0);
   protected readonly loading = signal(false);
   protected readonly followLoading = signal(false);
 
@@ -67,6 +68,8 @@ export class UserProfileComponent implements OnInit {
       avatarUrl: user.avatarUrl,
       bio: user.bio,
       isFollowing: this._isFollowing(),
+      followersCount: this._followersCount(),
+      followingCount: this._followingCount(),
     };
   });
 
@@ -81,6 +84,7 @@ export class UserProfileComponent implements OnInit {
       next: user => {
         this._user.set(user);
         this.loading.set(false);
+        this.loadCounts();
         const viewerId = this.currentUser.user()?.id;
         if (viewerId && viewerId !== this.profileId()) {
           this.checkFollowing(viewerId);
@@ -93,8 +97,20 @@ export class UserProfileComponent implements OnInit {
     });
   }
 
+  /** Counts come from the social graph (Neo4j); a failure just leaves them at 0. */
+  private loadCounts(): void {
+    this.socialGraphService.getFollowers(this.profileId()).subscribe({
+      next: list => this._followersCount.set(list.length),
+      error: () => {}
+    });
+    this.socialGraphService.getFollowing(this.profileId()).subscribe({
+      next: list => this._followingCount.set(list.length),
+      error: () => {}
+    });
+  }
+
   private checkFollowing(viewerId: string): void {
-    this.socialGraphService.isFollowing(viewerId, this.profileId()).subscribe({
+    this.socialGraphService.isFollowing(this.profileId()).subscribe({
       next: result => this._isFollowing.set(result),
       error: () => {}
     });
@@ -110,11 +126,14 @@ export class UserProfileComponent implements OnInit {
     this.followLoading.set(true);
 
     const action$ = shouldFollow
-      ? this.socialGraphService.follow(viewerId, this.profileId())
-      : this.socialGraphService.unfollow(viewerId, this.profileId());
+      ? this.socialGraphService.follow(this.profileId())
+      : this.socialGraphService.unfollow(this.profileId());
 
     action$.subscribe({
       next: () => {
+        if (shouldFollow !== this._isFollowing()) {
+          this._followersCount.update(n => Math.max(0, n + (shouldFollow ? 1 : -1)));
+        }
         this._isFollowing.set(shouldFollow);
         this.followLoading.set(false);
         this.snackBar.open(shouldFollow ? 'Following!' : 'Unfollowed', undefined, { duration: 2000 });
