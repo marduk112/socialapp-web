@@ -1,6 +1,6 @@
 # Frontend — LLM Instructions
 
-Angular 19, standalone components, Angular Material 19, TypeScript 5.6.
+Angular 22, standalone components, Angular Material 22, TypeScript 6.0.
 
 Dev server: `localhost:4200` | Backend API: `localhost:8080`
 
