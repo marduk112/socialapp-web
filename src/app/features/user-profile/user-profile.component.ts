@@ -7,7 +7,6 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UserService } from '../../core/services/user.service';
@@ -20,7 +19,7 @@ import { UserCardComponent, UserCardData } from '../../shared/components/user-ca
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [CommonModule, MatSnackBarModule, MatProgressSpinnerModule, UserCardComponent],
+  imports: [MatSnackBarModule, MatProgressSpinnerModule, UserCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="profile-wrapper">

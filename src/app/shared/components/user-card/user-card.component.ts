@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,7 +17,7 @@ export interface UserCardData {
 @Component({
   selector: 'ui-user-card',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, FollowButtonComponent],
+  imports: [MatCardModule, MatButtonModule, MatIconModule, FollowButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <mat-card class="user-card">

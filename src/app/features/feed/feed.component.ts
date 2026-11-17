@@ -8,7 +8,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -40,7 +39,6 @@ import { CommentSectionComponent, AddCommentEvent, EditCommentEvent, DeleteComme
   selector: 'app-feed',
   standalone: true,
   imports: [
-    CommonModule,
     RouterLink,
     FormsModule,
     MatButtonModule,
@@ -56,8 +54,8 @@ import { CommentSectionComponent, AddCommentEvent, EditCommentEvent, DeleteComme
     TrendingComponent,
     CharCounterComponent,
     MediaPickerComponent,
-    CommentSectionComponent,
-  ],
+    CommentSectionComponent
+],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="feed-container">
